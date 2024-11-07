@@ -3,7 +3,9 @@
     <canvas ref="starfield" width="1024" height="768"></canvas>
     <div class="overlay">
       <WalletConnection @nft-selected="handleNftSelected" />
-      <button @click="captureAnimation" class="lcars-button">Export to GIF</button>
+      <button @click="captureAnimation" class="lcars-button" :disabled="isCapturing">
+        {{ isCapturing ? 'Capturing...' : 'Export to GIF' }}
+      </button>
     </div>
   </div>
 </template>
@@ -21,13 +23,16 @@ export default {
       selectedNftImage: null,
       nftImageLoaded: false,
       nftImageElement: null,
-      animationTime: 0
+      animationTime: 0,
+      isCapturing: false
     }
   },
   methods: {
-    handleNftSelected(imageUrl) {
-      console.log('Received NFT image URL:', imageUrl);
+    handleNftSelected(nftData) {
+      console.log('Received NFT data:', nftData);
+      this.selectedNft = nftData;
       const nftImg = new Image();
+      nftImg.crossOrigin = "anonymous";
       nftImg.onload = () => {
         console.log('NFT image loaded successfully');
         this.nftImageLoaded = true;
@@ -38,8 +43,77 @@ export default {
         this.nftImageLoaded = false;
         this.nftImageElement = null;
       };
-      nftImg.src = imageUrl;
-      this.selectedNftImage = imageUrl;
+      nftImg.src = nftData.image;
+      this.selectedNftImage = nftData.image;
+    },
+    async captureAnimation() {
+      if (this.isCapturing) return;
+      
+      this.isCapturing = true;
+      console.log('Selected NFT when capturing:', this.selectedNft);
+      const canvas = this.$refs.starfield;
+      
+      try {
+        const gif = new GIF({
+          workers: 2,
+          quality: 10,
+          width: canvas.width,
+          height: canvas.height,
+          workerScript: '/gif.worker.js'
+        });
+
+        let frameCount = 0;
+        const totalFrames = 60; // 2 seconds at 30fps
+
+        const addFrame = () => {
+          return new Promise((resolve) => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+            gif.addFrame(tempCanvas, { copy: true, delay: 33 });
+            resolve();
+          });
+        };
+
+        gif.on('finished', (blob) => {
+          // Create a temporary URL for the GIF
+          const url = URL.createObjectURL(blob);
+          
+          // Get NFT name for the tweet text
+          const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
+          
+          // Prepare tweet text
+          const tweetText = `My ${nftName} is going to warp speed! 🚀✨`;
+          
+          // Open Twitter Web Intent in a new window
+          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+          window.open(twitterUrl, '_blank');
+          
+          // Still provide download option
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${nftName}-warp.gif`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          URL.revokeObjectURL(url);
+          this.isCapturing = false;
+        });
+
+        while (frameCount < totalFrames) {
+          await addFrame();
+          await new Promise(resolve => setTimeout(resolve, 33));
+          frameCount++;
+        }
+
+        gif.render();
+      } catch (error) {
+        console.error('Error capturing animation:', error);
+        this.isCapturing = false;
+      }
     }
   },
   mounted() {
@@ -48,11 +122,12 @@ export default {
     const stars = [];
     const numStars = 2000;
     const image = new Image();
+    image.crossOrigin = "anonymous";
     image.src = require('@/assets/blastoff-removebg.png');
     
     const component = this;
-    const floatAmplitude = 15; // How far up/down the ship moves
-    const floatSpeed = 0.02; // Increased speed for more noticeable movement
+    const floatAmplitude = 15;
+    const floatSpeed = 0.02;
 
     image.onload = () => {
       console.log('Rocket image loaded successfully');
@@ -215,5 +290,10 @@ canvas {
   border-radius: 10px;
   margin: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.lcars-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

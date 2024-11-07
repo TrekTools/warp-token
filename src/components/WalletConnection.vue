@@ -53,8 +53,11 @@ export default {
     },
     selectNft() {
       if (this.selectedNft) {
-        console.log('Emitting NFT image:', this.selectedNft.image);
-        this.$emit('nft-selected', this.selectedNft.image);
+        console.log('Emitting NFT:', this.selectedNft);
+        this.$emit('nft-selected', {
+          image: this.selectedNft.image,
+          name: this.selectedNft.name
+        });
       }
     }
   },
