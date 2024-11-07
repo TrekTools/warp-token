@@ -4,8 +4,37 @@
     <div class="overlay">
       <WalletConnection @nft-selected="handleNftSelected" />
       <button @click="captureAnimation" class="lcars-button" :disabled="isCapturing">
-        {{ isCapturing ? 'Capturing...' : 'Export to GIF' }}
+        {{ isCapturing ? 'Capturing...' : 'Engage' }}
       </button>
+      <div v-if="videoUrl" class="video-container">
+        <video 
+          :src="videoUrl" 
+          controls 
+          loop 
+          class="captured-video"
+        ></video>
+        <div class="button-container">
+          <button 
+            @click="shareOnTwitter" 
+            class="lcars-button twitter-button"
+          >
+            Post on Twitter 🐦
+          </button>
+          <button 
+            @click="saveAsGif" 
+            class="lcars-button gif-button"
+            :disabled="isConverting"
+          >
+            {{ isConverting ? 'Converting...' : 'Save as GIF' }}
+          </button>
+          <button 
+            @click="saveVideo" 
+            class="lcars-button video-button"
+          >
+            Save Video
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -23,7 +52,10 @@ export default {
       nftImageLoaded: false,
       nftImageElement: null,
       animationTime: 0,
-      isCapturing: false
+      isCapturing: false,
+      videoUrl: null,
+      showTwitterButton: false,
+      isConverting: false
     }
   },
   methods: {
@@ -49,80 +81,142 @@ export default {
       if (this.isCapturing) return;
       
       this.isCapturing = true;
-      console.log('Selected NFT when capturing:', this.selectedNft);
+      console.log('Starting capture...');
       const canvas = this.$refs.starfield;
       
       try {
         const stream = canvas.captureStream(30);
         const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm',
+          mimeType: 'video/webm;codecs=h264',
           videoBitsPerSecond: 2500000
         });
 
         const chunks = [];
-        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        const RECORD_DURATION = 2000; // 2 seconds
         
-        mediaRecorder.onstop = async () => {
-          const blob = new Blob(chunks, { type: 'video/webm' });
-          
-          try {
-            const formData = new FormData();
-            formData.append('file', blob, 'capture.webm');
-            formData.append('upload_preset', process.env.VUE_APP_CLOUDINARY_UPLOAD_PRESET);
-            formData.append('resource_type', 'video');
-
-            console.log('Uploading to Cloudinary...');
-            console.log('Cloud name:', process.env.VUE_APP_CLOUDINARY_CLOUD_NAME);
-            console.log('Upload preset:', process.env.VUE_APP_CLOUDINARY_UPLOAD_PRESET);
-
-            const response = await fetch(
-              `https://api.cloudinary.com/v1_1/${process.env.VUE_APP_CLOUDINARY_CLOUD_NAME}/video/upload`,
-              {
-                method: 'POST',
-                body: formData
-              }
-            );
-
-            const data = await response.json();
-            console.log('Full Cloudinary response:', data);
-
-            if (!response.ok) {
-              throw new Error(`Upload failed: ${data.error?.message || 'Unknown error'}`);
-            }
-            
-            if (data.secure_url) {
-              // Get NFT name for the tweet text
-              const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
-              
-              // Prepare tweet text with video link
-              const tweetText = `My ${nftName} is going to warp speed! 🚀✨\n${data.secure_url}`;
-              
-              // Open Twitter Web Intent
-              const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-              window.open(twitterUrl, '_blank');
-            } else {
-              throw new Error('No secure URL in response');
-            }
-          } catch (error) {
-            console.error('Detailed upload error:', error);
-            console.error('Error message:', error.message);
-            alert(`Upload failed: ${error.message}`);
-          }
-          
-          this.isCapturing = false;
+        mediaRecorder.ondataavailable = (e) => {
+          console.log('Chunk received');
+          chunks.push(e.data);
         };
 
-        // Start recording
+        // Create a Promise that resolves when recording is complete
+        const recordingPromise = new Promise((resolve, reject) => {
+          mediaRecorder.onstop = () => resolve();
+          mediaRecorder.onerror = (e) => reject(e);
+        });
+        
+        console.log('Starting recording...');
         mediaRecorder.start();
 
-        // Record for 2 seconds
         setTimeout(() => {
-          mediaRecorder.stop();
-        }, 2000);
+          if (mediaRecorder.state === 'recording') {
+            console.log('Stopping recording...');
+            mediaRecorder.stop();
+          }
+        }, RECORD_DURATION);
+
+        await recordingPromise;
+        
+        console.log('Recording complete, creating video URL...');
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        
+        // Clear previous video if it exists
+        if (this.videoUrl) {
+          URL.revokeObjectURL(this.videoUrl);
+        }
+        
+        this.videoUrl = URL.createObjectURL(blob);
+        console.log('Video URL created:', this.videoUrl);
+        this.showTwitterButton = true;
 
       } catch (error) {
-        console.error('Error capturing animation:', error);
+        console.error('Recording error:', error);
+        alert('Failed to capture video. Please try again.');
+      } finally {
         this.isCapturing = false;
+      }
+    },
+    async shareOnTwitter() {
+      if (!this.videoUrl || !this.selectedNft) return;
+      
+      try {
+        const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
+        const tweetText = `My ${nftName} is going to warp speed! 🚀✨`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+        window.open(twitterUrl, '_blank');
+      } catch (error) {
+        console.error('Error sharing:', error);
+        alert('Failed to share. Please try again.');
+      }
+    },
+    async saveAsGif() {
+      if (!this.videoUrl || this.isConverting) return;
+      
+      this.isConverting = true;
+      
+      try {
+        // Get NFT name for filename
+        const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
+        const filename = `${nftName}-warp-speed.gif`;
+        
+        // Fetch the video blob
+        const response = await fetch(this.videoUrl);
+        const blob = await response.blob();
+        
+        // Create a download URL from the blob
+        const url = URL.createObjectURL(blob);
+        
+        // Create a download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Clean up the URL
+        URL.revokeObjectURL(url);
+        
+      } catch (error) {
+        console.error('Error saving GIF:', error);
+        alert('Failed to save GIF. Please try again.');
+      } finally {
+        this.isConverting = false;
+      }
+    },
+    async saveVideo() {
+      if (!this.videoUrl) return;
+      
+      try {
+        // Get NFT name for filename
+        const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
+        const filename = `${nftName}-warp-speed.mp4`;
+        
+        // Fetch the video blob
+        const response = await fetch(this.videoUrl);
+        const blob = await response.blob();
+        
+        // Create a download URL from the blob
+        const url = URL.createObjectURL(blob);
+        
+        // Create a download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Clean up the URL
+        URL.revokeObjectURL(url);
+        
+      } catch (error) {
+        console.error('Error saving video:', error);
+        alert('Failed to save video. Please try again.');
       }
     }
   },
@@ -272,6 +366,10 @@ canvas {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .lcars {
@@ -305,5 +403,61 @@ canvas {
 .lcars-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.video-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.captured-video {
+  max-width: 400px;
+  border: 2px solid #FF6633;
+  border-radius: 10px;
+  background-color: black;
+}
+
+.twitter-button {
+  background-color: #1DA1F2;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.twitter-button:hover {
+  background-color: #1991DA;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.gif-button {
+  background-color: #FF6633;  /* LCARS orange */
+  color: black;
+}
+
+.gif-button:hover:not(:disabled) {
+  background-color: #FF8855;
+}
+
+.gif-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.video-button {
+  background-color: #9999CC;  /* LCARS purple */
+  color: white;
+}
+
+.video-button:hover {
+  background-color: #AAAADD;
 }
 </style>
