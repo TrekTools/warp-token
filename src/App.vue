@@ -1,38 +1,44 @@
 <template>
   <div id="app" class="lcars">
-    <canvas ref="starfield" width="1024" height="768"></canvas>
-    <div class="overlay">
-      <WalletConnection @nft-selected="handleNftSelected" />
-      <button @click="captureAnimation" class="lcars-button" :disabled="isCapturing">
-        {{ isCapturing ? 'Capturing...' : 'Engage' }}
-      </button>
-      <div v-if="videoUrl" class="video-container">
-        <video 
-          :src="videoUrl" 
-          controls 
-          loop 
-          class="captured-video"
-        ></video>
-        <div class="button-container">
-          <button 
-            @click="shareOnTwitter" 
-            class="lcars-button twitter-button"
-          >
-            Post on Twitter 🐦
-          </button>
-          <button 
-            @click="saveAsGif" 
-            class="lcars-button gif-button"
-            :disabled="isConverting"
-          >
-            {{ isConverting ? 'Converting...' : 'Save as GIF' }}
-          </button>
-          <button 
-            @click="saveVideo" 
-            class="lcars-button video-button"
-          >
-            Save Video
-          </button>
+    <div class="lcars-header">
+      <div class="header-left">
+        <div class="header-block" @click="refreshPage">
+          <img src="@/assets/warp2r.png" alt="Warp Logo" class="header-logo">
+        </div>
+        <div class="header-title">WARPIFY YOUR NFTS</div>
+      </div>
+      <div class="header-right">
+        <div class="header-numbers">{{ stardate }}</div>
+      </div>
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+      <div class="shooting-star"></div>
+    </div>
+    
+    <div class="main-content">
+      <canvas ref="starfield" width="1024" height="768"></canvas>
+      <div class="overlay">
+        <div class="lcars-panel">
+          <WalletConnection @nft-selected="handleNftSelected" />
+          <div class="button-grid">
+            <button @click="captureAnimation" class="lcars-button primary" :disabled="isCapturing">
+              {{ isCapturing ? 'Capturing...' : 'WARPIFY' }}
+            </button>
+            <div v-if="videoUrl" class="video-container">
+              <video :src="videoUrl" controls loop class="captured-video"></video>
+              <div class="action-buttons">
+                <button @click="shareOnTwitter" class="lcars-button twitter">
+                  POST ON TWITTER 🐦
+                </button>
+                <button @click="saveAsGif" class="lcars-button secondary" :disabled="isConverting">
+                  {{ isConverting ? 'Converting...' : 'SAVE AS GIF' }}
+                </button>
+                <button @click="saveVideo" class="lcars-button tertiary">
+                  SAVE VIDEO
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -55,7 +61,9 @@ export default {
       isCapturing: false,
       videoUrl: null,
       showTwitterButton: false,
-      isConverting: false
+      isConverting: false,
+      stardate: '00000.0',
+      stardateInterval: null
     }
   },
   methods: {
@@ -92,7 +100,7 @@ export default {
         });
 
         const chunks = [];
-        const RECORD_DURATION = 2000; // 2 seconds
+        const RECORD_DURATION = 4000; // Changed from 2000 to 4000 milliseconds
         
         mediaRecorder.ondataavailable = (e) => {
           console.log('Chunk received');
@@ -218,6 +226,19 @@ export default {
         console.error('Error saving video:', error);
         alert('Failed to save video. Please try again.');
       }
+    },
+    updateStardate() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const dayOfYear = Math.floor((now - new Date(year, 0, 0)) / 86400000);
+      const timeOfDay = (now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) / 86400;
+      
+      // Format: [Year].[DayOfYear + TimeOfDay]
+      const base = (year - 2000) * 1000 + dayOfYear + timeOfDay;
+      this.stardate = base.toFixed(1);
+    },
+    refreshPage() {
+      window.location.reload();
     }
   },
   mounted() {
@@ -337,67 +358,150 @@ export default {
 
     initStars();
     animate();
+  },
+  created() {
+    this.updateStardate();
+    this.stardateInterval = setInterval(this.updateStardate, 1000);
+  },
+  beforeUnmount() {
+    if (this.stardateInterval) {
+      clearInterval(this.stardateInterval);
+    }
   }
 }
 </script>
 
 <style>
+body {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  font-family: 'Antonio', sans-serif;
+}
+
 #app {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  width: 100vw;
   height: 100vh;
-  background-color: #000000;
-  margin: 0;
-  font-family: 'LCARS', sans-serif;
-  color: #FFCC33;
+  overflow: hidden;
+  background-color: black;
+  font-family: 'Antonio', sans-serif;
+}
+
+.lcars-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  color: #FF9900;
+  position: relative;
+  overflow: hidden;
+  background-color: black;
+  height: 100px;
+  z-index: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-block {
+  width: 100px;
+  height: 100px;
+  background-color: black;
+  border-radius: 0 0 50px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.header-block:hover {
+  opacity: 0.9;
+}
+
+.header-logo {
+  width: 150%;
+  height: 150%;
+  object-fit: contain;
+}
+
+.header-title {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #FF9900;
+}
+
+.header-numbers {
+  font-size: 2em;
+  color: #FF9900;
+  margin-right: 10px;
+}
+
+.main-content {
+  position: relative;
+  height: calc(100vh - 240px);
 }
 
 canvas {
-  z-index: 1;
+  position: absolute;
+  top: 100px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 100px);
 }
 
 .overlay {
   position: relative;
   z-index: 2;
-  margin-top: 20px;
-  background-color: #FF6633;
   padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.lcars {
-  background-color: #000000;
-  color: #FFCC33;
-  font-family: 'LCARS', sans-serif;
-}
-
-.lcars-button {
-  background-color: #FF6633;
-  border: none;
-  color: #000000;
-  padding: 10px 20px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-  border-radius: 12px;
 }
 
 .lcars-panel {
-  background-color: #FFCC33;
-  padding: 10px;
-  border-radius: 10px;
-  margin: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 15px;
+  padding: 20px;
+  border: 2px solid #FF9900;
+}
+
+.button-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.lcars-button {
+  border: none;
+  padding: 12px 24px;
+  border-radius: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: opacity 0.2s;
+}
+
+.lcars-button.primary {
+  background-color: #CC0000;
+  color: white;
+}
+
+.lcars-button.secondary {
+  background-color: #9999CC;
+  color: black;
+}
+
+.lcars-button.tertiary {
+  background-color: #CC99CC;
+  color: black;
+}
+
+.lcars-button.twitter {
+  background-color: #1DA1F2;
+  color: white;
 }
 
 .lcars-button:disabled {
@@ -408,56 +512,58 @@ canvas {
 .video-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 15px;
 }
 
 .captured-video {
   max-width: 400px;
-  border: 2px solid #FF6633;
+  border: 2px solid #FF9900;
   border-radius: 10px;
-  background-color: black;
 }
 
-.twitter-button {
-  background-color: #1DA1F2;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.twitter-button:hover {
-  background-color: #1991DA;
-}
-
-.button-container {
+.action-buttons {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  flex-wrap: wrap;
 }
 
-.gif-button {
-  background-color: #FF6633;  /* LCARS orange */
-  color: black;
+@keyframes shooting-star {
+  0% {
+    transform: translateX(100vw) translateY(0) rotate(-45deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100vw) translateY(0) rotate(-45deg);
+    opacity: 0;
+  }
 }
 
-.gif-button:hover:not(:disabled) {
-  background-color: #FF8855;
+.shooting-star {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(90deg, white, transparent);
+  border-radius: 50%;
+  z-index: 1;
+  right: 0;
 }
 
-.gif-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.shooting-star:nth-child(1) {
+  width: 100px;
+  top: 20px;
+  animation: shooting-star 4s linear infinite;
 }
 
-.video-button {
-  background-color: #9999CC;  /* LCARS purple */
-  color: white;
+.shooting-star:nth-child(2) {
+  width: 150px;
+  top: 40px;
+  animation: shooting-star 6s linear infinite;
+  animation-delay: 2s;
 }
 
-.video-button:hover {
-  background-color: #AAAADD;
+.shooting-star:nth-child(3) {
+  width: 80px;
+  top: 60px;
+  animation: shooting-star 3s linear infinite;
+  animation-delay: 1s;
 }
 </style>
