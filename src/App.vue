@@ -12,7 +12,6 @@
 
 <script>
 import WalletConnection from './components/WalletConnection.vue';
-import GIF from 'gif.js';
 
 export default {
   components: {
@@ -54,62 +53,73 @@ export default {
       const canvas = this.$refs.starfield;
       
       try {
-        const gif = new GIF({
-          workers: 2,
-          quality: 10,
-          width: canvas.width,
-          height: canvas.height,
-          workerScript: '/gif.worker.js'
+        const stream = canvas.captureStream(30);
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm',
+          videoBitsPerSecond: 2500000
         });
 
-        let frameCount = 0;
-        const totalFrames = 60; // 2 seconds at 30fps
+        const chunks = [];
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          
+          try {
+            const formData = new FormData();
+            formData.append('file', blob, 'capture.webm');
+            formData.append('upload_preset', process.env.VUE_APP_CLOUDINARY_UPLOAD_PRESET);
+            formData.append('resource_type', 'video');
 
-        const addFrame = () => {
-          return new Promise((resolve) => {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(canvas, 0, 0);
-            gif.addFrame(tempCanvas, { copy: true, delay: 33 });
-            resolve();
-          });
+            console.log('Uploading to Cloudinary...');
+            console.log('Cloud name:', process.env.VUE_APP_CLOUDINARY_CLOUD_NAME);
+            console.log('Upload preset:', process.env.VUE_APP_CLOUDINARY_UPLOAD_PRESET);
+
+            const response = await fetch(
+              `https://api.cloudinary.com/v1_1/${process.env.VUE_APP_CLOUDINARY_CLOUD_NAME}/video/upload`,
+              {
+                method: 'POST',
+                body: formData
+              }
+            );
+
+            const data = await response.json();
+            console.log('Full Cloudinary response:', data);
+
+            if (!response.ok) {
+              throw new Error(`Upload failed: ${data.error?.message || 'Unknown error'}`);
+            }
+            
+            if (data.secure_url) {
+              // Get NFT name for the tweet text
+              const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
+              
+              // Prepare tweet text with video link
+              const tweetText = `My ${nftName} is going to warp speed! 🚀✨\n${data.secure_url}`;
+              
+              // Open Twitter Web Intent
+              const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+              window.open(twitterUrl, '_blank');
+            } else {
+              throw new Error('No secure URL in response');
+            }
+          } catch (error) {
+            console.error('Detailed upload error:', error);
+            console.error('Error message:', error.message);
+            alert(`Upload failed: ${error.message}`);
+          }
+          
+          this.isCapturing = false;
         };
 
-        gif.on('finished', (blob) => {
-          // Create a temporary URL for the GIF
-          const url = URL.createObjectURL(blob);
-          
-          // Get NFT name for the tweet text
-          const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
-          
-          // Prepare tweet text
-          const tweetText = `My ${nftName} is going to warp speed! 🚀✨`;
-          
-          // Open Twitter Web Intent in a new window
-          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-          window.open(twitterUrl, '_blank');
-          
-          // Still provide download option
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${nftName}-warp.gif`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          
-          URL.revokeObjectURL(url);
-          this.isCapturing = false;
-        });
+        // Start recording
+        mediaRecorder.start();
 
-        while (frameCount < totalFrames) {
-          await addFrame();
-          await new Promise(resolve => setTimeout(resolve, 33));
-          frameCount++;
-        }
+        // Record for 2 seconds
+        setTimeout(() => {
+          mediaRecorder.stop();
+        }, 2000);
 
-        gif.render();
       } catch (error) {
         console.error('Error capturing animation:', error);
         this.isCapturing = false;
