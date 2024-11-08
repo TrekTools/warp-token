@@ -5,7 +5,23 @@
         <div class="header-block" @click="refreshPage">
           <img src="@/assets/warp2r.png" alt="Warp Logo" class="header-logo">
         </div>
-        <div class="header-title">WARPIFY YOUR NFTS</div>
+        <div class="header-title">
+          WARPIFY YOUR NFTS
+          <div class="contract-address">CA: 0x040111aA11c6A529F33EEf6C6D0114C3F6B49A3E</div>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="social-icons">
+          <a href="https://twitter.com/warpsei" target="_blank" class="social-icon">
+            <i class="fab fa-twitter"></i>
+          </a>
+          <a href="https://discord.gg/K9vUgVxm3W" target="_blank" class="social-icon">
+            <i class="fab fa-discord"></i>
+          </a>
+          <a href="https://t.me/warpsei" target="_blank" class="social-icon">
+            <i class="fab fa-telegram"></i>
+          </a>
+        </div>
       </div>
       <div class="header-right">
         <div class="header-numbers">{{ stardate }}</div>
@@ -149,7 +165,7 @@ export default {
       
       try {
         const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
-        const tweetText = `My ${nftName} is going to warp speed! 🚀✨`;
+        const tweetText = `${nftName} is going to $WARP speed! 🚀✨ https://t.me/warpsei CA: 0x921FaF220dcaf3E32FCd474d12C3892040DDe623 @warpsei`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(twitterUrl, '_blank');
       } catch (error) {
@@ -397,7 +413,6 @@ body {
   overflow: hidden;
   background-color: black;
   height: 100px;
-  z-index: 0;
 }
 
 .header-left {
@@ -565,5 +580,116 @@ canvas {
   top: 60px;
   animation: shooting-star 3s linear infinite;
   animation-delay: 1s;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  right: 20px;  /* Position under stardate */
+  top: 60px;    /* Move below stardate */
+}
+
+.social-icons {
+  display: flex;
+  gap: 20px;
+}
+
+.social-icon {
+  font-size: 24px;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.social-icon .fa-twitter {
+  color: #1DA1F2;  /* Twitter blue */
+}
+
+.social-icon .fa-discord {
+  color: #7289DA;  /* Discord purple */
+}
+
+.social-icon .fa-telegram {
+  color: #0088cc;  /* Telegram blue */
+}
+
+.social-icon:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+@media screen and (max-width: 768px) {
+  .lcars-header {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+  }
+
+  .header-left {
+    width: 100%;
+  }
+
+  .header-title {
+    font-size: 1.5em;
+    text-align: center;
+  }
+
+  .header-center {
+    position: static;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .header-right {
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .social-icons {
+    justify-content: center;
+    margin-right: 0;
+  }
+
+  .main-content {
+    padding: 10px;
+  }
+
+  .button-grid {
+    width: 100%;
+  }
+
+  .captured-video {
+    max-width: 100%;
+  }
+
+  .action-buttons {
+    justify-content: center;
+  }
+
+  .contract-address {
+    font-size: 0.5em;
+    text-align: center;
+  }
+}
+
+/* For very small screens */
+@media screen and (max-width: 480px) {
+  .header-title {
+    font-size: 1.2em;
+  }
+
+  .social-icons {
+    gap: 15px;
+  }
+
+  .social-icon {
+    font-size: 20px;
+  }
+}
+
+.contract-address {
+  font-size: 0.4em;
+  opacity: 0.8;
+  margin-top: 5px;
 }
 </style>

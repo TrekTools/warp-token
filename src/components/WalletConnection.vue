@@ -103,12 +103,15 @@ export default {
   padding: 15px;
   background: rgba(0, 0, 0, 0.7);
   border-radius: 15px;
+  flex-wrap: wrap;
 }
 
 .input-group, .nft-selection-group {
   display: flex;
   gap: 15px;
   align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .lcars-input {
@@ -118,7 +121,9 @@ export default {
   background-color: #000;
   color: white;
   font-size: 1em;
-  min-width: 300px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
 }
 
 .lcars-select {
@@ -128,13 +133,17 @@ export default {
   background-color: #000;
   color: white;
   font-size: 1em;
+  flex: 1;
   min-width: 200px;
+  max-width: 300px;
 }
 
 .selected-nft {
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .nft-image {
@@ -185,5 +194,56 @@ input::placeholder {
 select option:not(.placeholder-option) {
   color: white;
   background-color: #000;
+}
+
+/* Media queries for mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .wallet-connection {
+    flex-direction: column;
+    gap: 15px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 10px;
+  }
+
+  .input-group, .nft-selection-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .lcars-input, .lcars-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .selected-nft {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .lcars-button {
+    width: 100%;
+    margin-top: 5px;
+  }
+}
+
+/* For very small screens */
+@media screen and (max-width: 480px) {
+  .wallet-connection {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .lcars-button {
+    padding: 8px 15px;
+    font-size: 0.9em;
+  }
+
+  .nft-image {
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>
