@@ -46,9 +46,6 @@
                 <button @click="shareOnTwitter" class="lcars-button twitter">
                   POST ON TWITTER 🐦
                 </button>
-                <button @click="saveAsGif" class="lcars-button secondary" :disabled="isConverting">
-                  {{ isConverting ? 'Converting...' : 'SAVE AS GIF' }}
-                </button>
                 <button @click="saveVideo" class="lcars-button tertiary">
                   SAVE VIDEO
                 </button>
@@ -77,7 +74,6 @@ export default {
       isCapturing: false,
       videoUrl: null,
       showTwitterButton: false,
-      isConverting: false,
       stardate: '00000.0',
       stardateInterval: null
     }
@@ -111,12 +107,12 @@ export default {
       try {
         const stream = canvas.captureStream(30);
         const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm;codecs=h264',
+          mimeType: 'video/mp4',
           videoBitsPerSecond: 2500000
         });
 
         const chunks = [];
-        const RECORD_DURATION = 4000; // Changed from 2000 to 4000 milliseconds
+        const RECORD_DURATION = 4000;
         
         mediaRecorder.ondataavailable = (e) => {
           console.log('Chunk received');
@@ -142,7 +138,7 @@ export default {
         await recordingPromise;
         
         console.log('Recording complete, creating video URL...');
-        const blob = new Blob(chunks, { type: 'video/webm' });
+        const blob = new Blob(chunks, { type: 'video/mp4' });
         
         // Clear previous video if it exists
         if (this.videoUrl) {
@@ -165,49 +161,12 @@ export default {
       
       try {
         const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
-        const tweetText = `${nftName} is going to $WARP speed! 🚀✨ https://t.me/warpsei CA: 0x921FaF220dcaf3E32FCd474d12C3892040DDe623 @warpsei`;
+        const tweetText = `${nftName} is going to $WARP speed! 🚀✨ https://t.me/warpsei CA: 0x921FaF220dcaf3E32FCd474d12C3892040DDe623 @warpsei https://warpify.netlify.app/`;
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(twitterUrl, '_blank');
       } catch (error) {
         console.error('Error sharing:', error);
         alert('Failed to share. Please try again.');
-      }
-    },
-    async saveAsGif() {
-      if (!this.videoUrl || this.isConverting) return;
-      
-      this.isConverting = true;
-      
-      try {
-        // Get NFT name for filename
-        const nftName = this.selectedNft?.name?.replace(' #', '').replace(/\s+/g, '') || 'unnamed';
-        const filename = `${nftName}-warp-speed.gif`;
-        
-        // Fetch the video blob
-        const response = await fetch(this.videoUrl);
-        const blob = await response.blob();
-        
-        // Create a download URL from the blob
-        const url = URL.createObjectURL(blob);
-        
-        // Create a download link
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        
-        // Trigger download
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Clean up the URL
-        URL.revokeObjectURL(url);
-        
-      } catch (error) {
-        console.error('Error saving GIF:', error);
-        alert('Failed to save GIF. Please try again.');
-      } finally {
-        this.isConverting = false;
       }
     },
     async saveVideo() {
