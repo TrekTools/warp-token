@@ -67,9 +67,20 @@ export default {
         return;
       }
       try {
-        const response = await axios.get(`https://api.pallet.exchange/api/v1/user/${this.walletAddress}?network=mainnet&include_tokens=true&include_bids=true`);
+        console.log('Fetching NFTs for address:', this.walletAddress);
+        const response = await axios.get(
+          `https://api.pallet.exchange/api/v1/user/${this.walletAddress}?network=mainnet&include_tokens=true&include_bids=true`,
+          {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.log('Raw API response:', response);
         this.nftData = response.data;
-        console.log('NFT data fetched:', this.nftData);
+        console.log('Processed NFT data:', this.nftData);
         
         // Auto-select first NFT if available
         if (this.nftData.nfts && this.nftData.nfts.length > 0) {
@@ -78,8 +89,13 @@ export default {
           this.selectNft();
         }
       } catch (error) {
-        console.error('Error fetching NFT data:', error);
-        alert('Failed to fetch NFT data. Please try again.');
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response,
+          status: error.response?.status,
+          data: error.response?.data
+        });
+        alert('Failed to fetch NFT data. Please check the wallet address and try again.');
       }
     },
     selectNft() {
